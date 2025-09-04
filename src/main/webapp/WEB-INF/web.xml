@@ -1,0 +1,29 @@
+<!DOCTYPE web-app>
+
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
+                             http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+         version="3.1">
+         
+  <display-name>cs340_esolang_compiler</display-name>
+
+  <!-- Welcome file -->
+  <welcome-file-list>
+    <welcome-file>esolang_IDE.jsp</welcome-file>
+  </welcome-file-list>
+
+
+  <!--  Servlet Declaration  -->
+  <servlet>
+    <servlet-name>EsolangIDEServlet</servlet-name>
+    <servlet-class>edu.lkinzler.servlet.EsolangIDEServlet</servlet-class>
+  </servlet>
+
+  <!--  Servlet Mapping  -->
+  <servlet-mapping>
+    <servlet-name>EsolangIDEServlet</servlet-name>
+    <url-pattern>/esolang_IDE</url-pattern>
+  </servlet-mapping>
+
+</web-app>
