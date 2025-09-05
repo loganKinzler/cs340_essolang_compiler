@@ -13,9 +13,14 @@
     </head>
     <body>
         <textarea id="esolang-editor" rows="10" cols="40" name="editor-text" style="resize: none;"></textarea>
+
         <button onclick="compile()">Compile</button>
         <button onclick="run()">Run</button>
-        <div id="program-output"></div>
+
+        <div id="program-output">
+            <textarea id="console-output" readonly rows="10" cols="40" name="output-text" style="resize: none;"></textarea>
+            <textarea id="trace-output" readonly rows="10" cols="40" name="output-text" style="resize: none;"></textarea>
+        </div>
 
     </body>
 </html>
