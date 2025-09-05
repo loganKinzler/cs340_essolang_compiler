@@ -18,6 +18,7 @@
         <button onclick="run()">Run</button>
 
         <div id="program-output">
+            <textarea id="console-output" readonly rows="10" cols="40" name="output-text" style="resize: none;"></textarea>
             <textarea id="trace-output" readonly rows="10" cols="40" name="output-text" style="resize: none;"></textarea>
         </div>
 
