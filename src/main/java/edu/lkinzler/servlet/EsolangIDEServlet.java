@@ -7,10 +7,11 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
 import java.nio.file.Files;
 import java.util.Scanner;
+import java.util.StringJoiner;
+import java.util.StringTokenizer;
 
 
 public class EsolangIDEServlet extends HttpServlet {
@@ -23,46 +24,53 @@ public class EsolangIDEServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
-        //Use the txt file in the project root, stops tomcat from creating a different one
-        String projectPath = System.getProperty("user.dir");
-        File userInputFile = new File(projectPath, "User_Input.txt");
-
         //Writing textarea string into a txt file
         BufferedReader reqBodyReader = req.getReader();
-        StringBuilder traceOutput = new StringBuilder();
-
-        FileWriter user_input = new FileWriter(userInputFile);
         String line = reqBodyReader.readLine();
 
-
-
+        StringBuilder reqBodyStringBuilder = new StringBuilder();
+        StringBuilder traceOutputBuilder = new StringBuilder();
         int lineNum = 1;
 
         while (line != null) {
-            user_input.write(line + "\n");
-            traceOutput.append(String.format("Line %d: %s\n", lineNum, line));
-
-            line = reqBodyReader.readLine();
+            traceOutputBuilder.append( String.format("Line #%d: ", lineNum) );
+            traceOutputBuilder.append(line);
+            traceOutputBuilder.append("\n");
             lineNum++;
+
+            reqBodyStringBuilder.append(line);
+            reqBodyStringBuilder.append("\n");
+            line = reqBodyReader.readLine();
         }
 
-        // remove the last line (which is empty)
-        user_input.write("\b\b");
 
+
+        // remove the last line (which is empty)
+        traceOutputBuilder.deleteCharAt(traceOutputBuilder.length() - 1);
+        reqBodyStringBuilder.deleteCharAt(reqBodyStringBuilder.length() - 1);
+
+        // tokenize code
+        String code = reqBodyStringBuilder.append(" eof ").toString().replaceAll("[\n]", "eol");
+        StringTokenizer whiteSpaceTokenizer = new StringTokenizer(code, "\\w", false);
+
+
+        // Use the txt file in the project root, stops tomcat from creating a different one
+        String projectPath = System.getProperty("user.dir");
+        File userInputFile = new File(projectPath, "User_Input.txt");
+        FileWriter user_input = new FileWriter(userInputFile);
+
+        user_input.write( reqBodyStringBuilder.toString() );
+
+        // close
         user_input.close();
         reqBodyReader.close();
-
-        //Reading contents of the txt file
-//        File User_Input = new File(projectPath, "User_Input.txt");
-//        Scanner read = new Scanner(userInputFile);
-//        read.close();
 
         // format response
         resp.setContentType("text/html");
 
         // write
         PrintWriter respBodyWriter = resp.getWriter();
-        respBodyWriter.print( traceOutput );
+        respBodyWriter.print( traceOutputBuilder.toString() );
         respBodyWriter.close();
 	}
 }
