@@ -49,10 +49,26 @@ public class EsolangIDEServlet extends HttpServlet {
         traceOutputBuilder.deleteCharAt(traceOutputBuilder.length() - 1);
         reqBodyStringBuilder.deleteCharAt(reqBodyStringBuilder.length() - 1);
 
+        /*
         // tokenize code
         String code = reqBodyStringBuilder.append(" eof ").toString().replaceAll("[\n]", "eol");
         StringTokenizer whiteSpaceTokenizer = new StringTokenizer(code, "\\w", false);
+         */
 
+        //Save user input as a string into code
+        String code = reqBodyStringBuilder.toString();
+        //EOL will replace and next line's inside of code
+        code = code.replace("\n", "\nEOL\n");
+        //Add EOF at the end of code
+        code += "\nEOF";
+
+
+        //Create a token
+        //The delimiters for the token: whitespace, periods, tabs, next line
+        StringTokenizer token =  new StringTokenizer(code, " .\t\n", false);
+        while(token.hasMoreTokens()){
+            System.out.println(token.nextToken());
+        }
 
         // Use the txt file in the project root, stops tomcat from creating a different one
         String projectPath = System.getProperty("user.dir");
@@ -70,7 +86,8 @@ public class EsolangIDEServlet extends HttpServlet {
 
         // write
         PrintWriter respBodyWriter = resp.getWriter();
-        respBodyWriter.print( traceOutputBuilder.toString() );
+        //Also added text to indicate that the code is being "compiled"
+        respBodyWriter.print( traceOutputBuilder.toString() + "\nCompiling..." );
         respBodyWriter.close();
 	}
 }
