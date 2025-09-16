@@ -39,12 +39,30 @@ import java.util.StringTokenizer;
 
 public class EsolangIDEServlet extends HttpServlet {
 
+    /***********************************************************
+     * METHOD: doGet                                           *
+     * DESCRIPTION: This receives HTTP GET requests,           *
+     *     responding with the display for the webpage.        *
+     * PARAMETERS: HttpServletRequest, HttpServletResponse     *
+     * RETURN VALUE: void                                      *
+     **********************************************************/
+
     @Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         req.getRequestDispatcher("/esolang_IDE.jsp").forward(req, resp);
 	}
-	
-	@Override
+
+
+    /***********************************************************
+     * METHOD: doPost                                          *
+     * DESCRIPTION: This receives HTTP POST requests &         *
+     *     tokenizes the given esolang code, responding with   *
+     *     a trace of the compiled code.                       *
+     * PARAMETERS: HttpServletRequest, HttpServletResponse     *
+     * RETURN VALUE: void                                      *
+     **********************************************************/
+
+    @Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         //Writing textarea string into a txt file
