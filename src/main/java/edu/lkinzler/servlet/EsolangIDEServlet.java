@@ -65,17 +65,38 @@ public class EsolangIDEServlet extends HttpServlet {
 
         //Create a token
         //The delimiters for the token: whitespace, periods, tabs, next line
-        StringTokenizer token =  new StringTokenizer(code, " .\t\n", false);
-        while(token.hasMoreTokens()){
-            System.out.println(token.nextToken());
+        StringTokenizer tokenizer =  new StringTokenizer(code, "\t\n ", false);
+        StringJoiner tokenListJoiner = new StringJoiner("\n", "{", "}");
+
+        while(tokenizer.hasMoreTokens()) {
+            String token = tokenizer.nextToken();
+
+            if (!token.matches(".*[~`!@#$%^&*\\-_=+()\\[\\]{}:;'\",.<>/?\\\\|].*")) {
+                System.out.println(token);
+                tokenListJoiner.add(token);
+                continue;
+            }
+
+            StringTokenizer opperationTokenizer = new StringTokenizer(token,
+                    "~`!@#$%^&*-_=+()[]{}:;'\",.<>/?\\|", true);
+
+            while (opperationTokenizer.hasMoreTokens()) {
+                String opperationToken = opperationTokenizer.nextToken();
+                System.out.println(opperationToken);
+                tokenListJoiner.add(opperationToken);
+            }
         }
 
         // Use the txt file in the project root, stops tomcat from creating a different one
         String projectPath = System.getProperty("user.dir");
+
         File userInputFile = new File(projectPath, "User_Input.txt");
         FileWriter user_input = new FileWriter(userInputFile);
-
         user_input.write( reqBodyStringBuilder.toString() );
+
+        File tokenFile = new File(projectPath, "User_Tokens.txt");
+        FileWriter tokenWriter = new FileWriter(tokenFile);
+        tokenWriter.write( tokenListJoiner.toString() );
 
         // close
         user_input.close();

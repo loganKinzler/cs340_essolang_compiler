@@ -20,6 +20,5 @@
         <div id="program-output">
             <textarea id="trace-output" readonly rows="10" cols="40" name="output-text" style="resize: none;"></textarea>
         </div>
-
     </body>
 </html>
