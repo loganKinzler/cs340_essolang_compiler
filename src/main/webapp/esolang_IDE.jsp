@@ -12,13 +12,17 @@
         <script src="js/esolang-editor.js"></script>
     </head>
     <body>
-        <textarea id="esolang-editor" rows="10" cols="40" name="editor-text" style="resize: none;"></textarea>
+        <div id="program-input">
+            <textarea id="esolang-editor" rows="28" cols="85" name="editor-text" style="resize: none;"></textarea>
 
-        <button onclick="compile()">Compile</button>
-        <button onclick="run()">Run</button>
+            <div id="input-buttons">
+                <button onclick="compile()">Compile</button>
+                <button onclick="run()">Run</button>
+            </div>
+        </div>
 
         <div id="program-output">
-            <textarea id="trace-output" readonly rows="10" cols="40" name="output-text" style="resize: none;"></textarea>
+            <textarea id="trace-output" readonly rows="12" cols="85" name="output-text" style="resize: none;"></textarea>
         </div>
     </body>
 </html>
