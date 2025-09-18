@@ -24,7 +24,6 @@ body {
     aspect-ratio: 10/8;
 
     background-color: #94f2ff;
-
     border-color: #61a3bf;
     border-style: solid;
     border-radius: 5px;
@@ -33,7 +32,6 @@ body {
 
 #esolang-editor {
     background-color: whitesmoke;
-
     border-color: #bdd6e3;
     border-style: solid;
     border-radius: 5px;
@@ -42,7 +40,6 @@ body {
 
 #trace-output {
     background-color: aqua;
-
     border-color: #61bfb7;
     border-style: solid;
     border-radius: 5px;
