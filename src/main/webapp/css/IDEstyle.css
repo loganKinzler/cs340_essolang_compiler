@@ -1,7 +1,50 @@
-#trace-output {
-    background-color: red;
+body {
+    background-color: lightcyan;
 }
 
-#program-output {
-    background-color: blue;
+#program-input {
+    display: flex;
+    flex-direction: row;
+}
+
+#program-input > div {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+#input-buttons {
+    display: inline-flex;
+    flex-direction: column;
+
+    margin-left: 10px;
+}
+
+#input-buttons > button {
+    width: 75px;
+    aspect-ratio: 10/8;
+
+    background-color: #94f2ff;
+
+    border-color: #61a3bf;
+    border-style: solid;
+    border-radius: 5px;
+    border-width: medium;
+}
+
+#esolang-editor {
+    background-color: whitesmoke;
+
+    border-color: #bdd6e3;
+    border-style: solid;
+    border-radius: 5px;
+    border-width: medium;
+}
+
+#trace-output {
+    background-color: aqua;
+
+    border-color: #61bfb7;
+    border-style: solid;
+    border-radius: 5px;
+    border-width: medium;
 }
