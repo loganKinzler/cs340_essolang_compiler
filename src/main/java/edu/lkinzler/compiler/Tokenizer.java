@@ -1,47 +1,38 @@
 package edu.lkinzler.compiler;
 
-import java.io.File;
-import java.util.Scanner;
+import java.util.ArrayList;
 import java.util.StringJoiner;
 import java.util.StringTokenizer;
 
 public class Tokenizer {
 
-    private char seperator = ',';
+    String code;
 
-//    private String[] tokens;
-//    private String[] whitespace;
-//    private String[] endOfLines;
-
-    private File inputFile;
-    private File outputFile;
-
-
-    public Tokenizer(File input, File output) {
-
-        // I'll throw an IOException later if I can't read input or write output
-        this.inputFile = input;
-        this.outputFile = output;
+    public Tokenizer(String code) {
+        this.code = code;
     }
 
+    public String[] tokenize() {
+        ArrayList<String> codeTokens = new ArrayList<String>();
 
-//    public void tokenize() {
-//
-//        // Setup 1: Grab text from inputFile as a String
-//        StringBuilder inputAsString = "";
-//        Scanner inputScanner = new Scanner(this.inputFile.getAbsolutePath());
-//
-//        while (inputScanner.hasNextLine())
-//            inputAsString += inputScanner.nextLine();
-//
-//        inputScanner.close();
-//
-//        // Step 1: Remove Whitespace
-//
-//    }
+        //The delimiters for the token: whitespace, periods, tabs, next line
+        StringTokenizer tokenizer =  new StringTokenizer(code, "\t\n ", false);
 
-    @Override
-    public String toString() {
-        return "";
+        while(tokenizer.hasMoreTokens()) {
+            String token = tokenizer.nextToken();
+
+            if (!token.matches(".*[~`!@#$%^&*\\-_=+()\\[\\]{}:;'\",.<>/?\\\\|].*")) {
+                codeTokens.add(token);
+                continue;
+            }
+
+            StringTokenizer opperationTokenizer = new StringTokenizer(token,
+                    "~`!@#$%^&*-_=+()[]{}:;'\",.<>/?\\|", true);
+
+            while (opperationTokenizer.hasMoreTokens())
+                codeTokens.add( opperationTokenizer.nextToken() );
+        }
+
+        return (String[])codeTokens.toArray();
     }
 }

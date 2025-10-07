@@ -19,6 +19,8 @@
                 <button onclick="compile()">Compile</button>
                 <button onclick="run()">Run</button>
             </div>
+
+            <div id="graphics-output"></div>
         </div>
 
         <div id="program-output">

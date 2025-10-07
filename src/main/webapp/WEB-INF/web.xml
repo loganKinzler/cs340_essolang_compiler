@@ -6,24 +6,34 @@
                              http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
          version="3.1">
          
-  <display-name>cs340_esolang_compiler</display-name>
+    <display-name>cs340_esolang_compiler</display-name>
 
-  <!-- Welcome file -->
-  <welcome-file-list>
-    <welcome-file>esolang_IDE.jsp</welcome-file>
-  </welcome-file-list>
+    <!-- Welcome file -->
+    <welcome-file-list>
+        <welcome-file>esolang_IDE.jsp</welcome-file>
+    </welcome-file-list>
 
 
-  <!--  Servlet Declaration  -->
-  <servlet>
-    <servlet-name>EsolangIDEServlet</servlet-name>
-    <servlet-class>edu.lkinzler.servlet.EsolangIDEServlet</servlet-class>
-  </servlet>
+    <!--  Servlet Declaration  -->
+    <servlet>
+        <servlet-name>CompileServlet</servlet-name>
+        <servlet-class>edu.lkinzler.servlet.CompileServlet</servlet-class>
+    </servlet>
 
-  <!--  Servlet Mapping  -->
-  <servlet-mapping>
-    <servlet-name>EsolangIDEServlet</servlet-name>
-    <url-pattern>/esolang_IDE</url-pattern>
-  </servlet-mapping>
+    <servlet>
+        <servlet-name>RunServlet</servlet-name>
+        <servlet-class>edu.lkinzler.servlet.RunServlet</servlet-class>
+     </servlet>
+
+    <!--  Servlet Mapping  -->
+    <servlet-mapping>
+        <servlet-name>CompileServlet</servlet-name>
+        <url-pattern>/compile</url-pattern>
+    </servlet-mapping>
+
+    <servlet-mapping>
+        <servlet-name>RunServlet</servlet-name>
+        <url-pattern>/run</url-pattern>
+    </servlet-mapping>
 
 </web-app>

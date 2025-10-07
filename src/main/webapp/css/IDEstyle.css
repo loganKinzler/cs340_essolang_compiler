@@ -45,3 +45,29 @@ body {
     border-radius: 5px;
     border-width: medium;
 }
+
+#graphics-output {
+    position: relative;
+
+    width: 30%;
+    aspect-ratio: 1;
+
+    background-color: black;
+    border-color: #61bfb7;
+    border-style: solid;
+    border-radius: 5px;
+    border-width: medium;
+}
+
+.graphics-shape {
+    position: absolute;
+}
+
+.graphics-circle {
+    border-radius: 50%;
+}
+
+.graphics-rect {
+}
+
+@keyframes rotate {0% {transform:rotate(360deg);} }

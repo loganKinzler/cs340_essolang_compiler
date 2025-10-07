@@ -23,34 +23,48 @@ package edu.lkinzler.servlet;
  *******************************************************************/
 
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
-import java.nio.file.Files;
-import java.util.Scanner;
 import java.util.StringJoiner;
 import java.util.StringTokenizer;
 
+import edu.lkinzler.graphics.GraphicalInterpreter;
 
-public class EsolangIDEServlet extends HttpServlet {
 
-    /***********************************************************
-     * METHOD: doGet                                           *
-     * DESCRIPTION: This receives HTTP GET requests,           *
-     *     responding with the display for the webpage.        *
-     * PARAMETERS: HttpServletRequest, HttpServletResponse     *
-     * RETURN VALUE: void                                      *
-     **********************************************************/
+public class CompileServlet extends HttpServlet {
 
-    @Override
-	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        req.getRequestDispatcher("/esolang_IDE.jsp").forward(req, resp);
-	}
+    private String tokenize(String code) {
+        StringJoiner tokenJoiner = new StringJoiner("\n", "", "");
+
+        //The delimiters for the token: whitespace, periods, tabs, next line
+        StringTokenizer tokenizer =  new StringTokenizer(code, "\t\n ", false);
+
+        while(tokenizer.hasMoreTokens()) {
+            String token = tokenizer.nextToken();
+
+            if (!token.matches(".*[~`!@#$%^&*\\-_=+()\\[\\]{}:;'\",.<>/?\\\\|].*")) {
+                tokenJoiner.add(token);
+                continue;
+            }
+
+            StringTokenizer opperationTokenizer = new StringTokenizer(token,
+                    "~`!@#$%^&*-_=+()[]{}:;'\",.<>/?\\|", true);
+
+            while (opperationTokenizer.hasMoreTokens())
+                tokenJoiner.add( opperationTokenizer.nextToken() );
+        }
+
+        return tokenJoiner.toString();
+    }
 
 
     /***********************************************************
@@ -84,17 +98,10 @@ public class EsolangIDEServlet extends HttpServlet {
             line = reqBodyReader.readLine();
         }
 
-
-
         // remove the last line (which is empty)
         traceOutputBuilder.deleteCharAt(traceOutputBuilder.length() - 1);
         reqBodyStringBuilder.deleteCharAt(reqBodyStringBuilder.length() - 1);
 
-        /*
-        // tokenize code
-        String code = reqBodyStringBuilder.append(" eof ").toString().replaceAll("[\n]", "eol");
-        StringTokenizer whiteSpaceTokenizer = new StringTokenizer(code, "\\w", false);
-         */
 
         //Save user input as a string into code
         String code = reqBodyStringBuilder.toString();
@@ -103,30 +110,9 @@ public class EsolangIDEServlet extends HttpServlet {
         //Add EOF at the end of code
         code += "\nEOF";
 
+        // tokenize code
+        String tokenString = tokenize(code);
 
-        //Create a token
-        //The delimiters for the token: whitespace, periods, tabs, next line
-        StringTokenizer tokenizer =  new StringTokenizer(code, "\t\n ", false);
-        StringJoiner tokenListJoiner = new StringJoiner("\n", "{", "}");
-
-        while(tokenizer.hasMoreTokens()) {
-            String token = tokenizer.nextToken();
-
-            if (!token.matches(".*[~`!@#$%^&*\\-_=+()\\[\\]{}:;'\",.<>/?\\\\|].*")) {
-                System.out.println(token);
-                tokenListJoiner.add(token);
-                continue;
-            }
-
-            StringTokenizer opperationTokenizer = new StringTokenizer(token,
-                    "~`!@#$%^&*-_=+()[]{}:;'\",.<>/?\\|", true);
-
-            while (opperationTokenizer.hasMoreTokens()) {
-                String opperationToken = opperationTokenizer.nextToken();
-                System.out.println(opperationToken);
-                tokenListJoiner.add(opperationToken);
-            }
-        }
 
         // Use the txt file in the project root, stops tomcat from creating a different one
         String projectPath = System.getProperty("user.dir");
@@ -137,19 +123,20 @@ public class EsolangIDEServlet extends HttpServlet {
 
         File tokenFile = new File(projectPath, "User_Tokens.txt");
         FileWriter tokenWriter = new FileWriter(tokenFile);
-        tokenWriter.write( tokenListJoiner.toString() );
+        tokenWriter.write( tokenString );
 
         // close
-        user_input.close();
         reqBodyReader.close();
+        user_input.close();
+        tokenWriter.close();
+
 
         // format response
         resp.setContentType("text/html");
 
         // write
         PrintWriter respBodyWriter = resp.getWriter();
-        //Also added text to indicate that the code is being "compiled"
-        respBodyWriter.print( traceOutputBuilder.toString() + "\nCompiling..." );
+        respBodyWriter.print( traceOutputBuilder.toString());
         respBodyWriter.close();
 	}
 }
