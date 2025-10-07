@@ -32,9 +32,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import java.nio.file.Files;
-import java.util.Scanner;
-import java.util.StringJoiner;
-import java.util.StringTokenizer;
+import java.util.*;
 
 
 public class EsolangIDEServlet extends HttpServlet {
@@ -127,6 +125,70 @@ public class EsolangIDEServlet extends HttpServlet {
                 tokenListJoiner.add(opperationToken);
             }
         }
+
+        //Creating a list of keywords and operators
+        /*
+        List<String> keywords = new ArrayList<>();
+        keywords.add("if");
+        keywords.add("else");
+        keywords.add("for");
+        keywords.add("while");
+        keywords.add("do");
+         */
+        Map<String,Integer> keywords = new HashMap<>();
+        keywords.put("if", 100);
+        keywords.put("else", 101);
+        keywords.put("for", 102);
+        keywords.put("while", 103);
+        keywords.put("do", 104);
+
+        Map<String,Integer> operators = new HashMap<>();
+        operators.put("+", 200);
+        operators.put("-", 201);
+        operators.put("*", 202);
+        operators.put("/", 203);
+        operators.put("=", 204);
+
+        /*
+        List<String> operators = new ArrayList<>();
+        operators.add("+");
+        operators.add("-");
+        operators.add("*");
+        operators.add("/");
+        operators.add("=");
+
+         */
+
+        //This is the arraylist that will contain the operators and keywords for the tokens
+        List<Integer> code_printout = new ArrayList<>();
+        while(tokenizer.hasMoreTokens()) {
+            String token = tokenizer.nextToken();
+            if(keywords.containsKey(token)){
+                code_printout.add(keywords.get(token));
+
+            }
+
+            if(operators.containsKey(token)){
+                code_printout.add(operators.get(token));
+            }
+
+            //This deals with end of line and end of function.
+            //They will just be entered as 0 into the arraylist
+            if(token.equals("EOL") || token.equals("EOF")){
+                code_printout.add(0);
+            }
+        }
+
+        //Print out the code range for each token
+        for(int i =0; i<code_printout.size();i++){
+            if(code_printout.get(i) == 0){
+                System.out.print("\n");
+            }
+            System.out.print(code_printout.get(i));
+        }
+
+
+
 
         // Use the txt file in the project root, stops tomcat from creating a different one
         String projectPath = System.getProperty("user.dir");
