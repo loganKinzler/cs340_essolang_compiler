@@ -34,25 +34,23 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.util.StringJoiner;
-import java.util.StringTokenizer;
+import java.util.*;
 
 import edu.lkinzler.graphics.GraphicalInterpreter;
 
 
 public class CompileServlet extends HttpServlet {
 
-    private String tokenize(String code) {
-        StringJoiner tokenJoiner = new StringJoiner("\n", "", "");
+    private ArrayList<String> tokenize(String code) {
+        ArrayList<String> tokenList = new ArrayList<String>();
 
         //The delimiters for the token: whitespace, periods, tabs, next line
         StringTokenizer tokenizer =  new StringTokenizer(code, "\t\n ", false);
-
         while(tokenizer.hasMoreTokens()) {
             String token = tokenizer.nextToken();
 
             if (!token.matches(".*[~`!@#$%^&*\\-_=+()\\[\\]{}:;'\",.<>/?\\\\|].*")) {
-                tokenJoiner.add(token);
+                tokenList.add(token);
                 continue;
             }
 
@@ -60,10 +58,10 @@ public class CompileServlet extends HttpServlet {
                     "~`!@#$%^&*-_=+()[]{}:;'\",.<>/?\\|", true);
 
             while (opperationTokenizer.hasMoreTokens())
-                tokenJoiner.add( opperationTokenizer.nextToken() );
+                tokenList.add( opperationTokenizer.nextToken() );
         }
 
-        return tokenJoiner.toString();
+        return tokenList;
     }
 
 
@@ -98,6 +96,8 @@ public class CompileServlet extends HttpServlet {
             line = reqBodyReader.readLine();
         }
 
+
+
         // remove the last line (which is empty)
         traceOutputBuilder.deleteCharAt(traceOutputBuilder.length() - 1);
         reqBodyStringBuilder.deleteCharAt(reqBodyStringBuilder.length() - 1);
@@ -111,7 +111,70 @@ public class CompileServlet extends HttpServlet {
         code += "\nEOF";
 
         // tokenize code
-        String tokenString = tokenize(code);
+        ArrayList<String> tokens = tokenize(code);
+
+        StringJoiner tokenJoiner = new StringJoiner("\n", "", "");
+        for (String token : tokens)
+            tokenJoiner.add(token);
+
+        String tokenString = tokenJoiner.toString();
+
+        //Creating a list of keywords and operators
+        /*
+        List<String> keywords = new ArrayList<>();
+        keywords.add("if");
+        keywords.add("else");
+        keywords.add("for");
+        keywords.add("while");
+        keywords.add("do");
+         */
+        Map<String,Integer> keywords = new HashMap<>();
+        keywords.put("if", 100);
+        keywords.put("else", 101);
+        keywords.put("for", 102);
+        keywords.put("while", 103);
+        keywords.put("do", 104);
+
+        Map<String,Integer> operators = new HashMap<>();
+        operators.put("+", 200);
+        operators.put("-", 201);
+        operators.put("*", 202);
+        operators.put("/", 203);
+        operators.put("=", 204);
+
+
+        //This is the arraylist that will contain the operators and keywords for the tokens
+        List<Integer> code_printout = new ArrayList<>();
+//        tokenListIterator =
+        Iterator<String> tokensIterator = tokens.iterator();
+
+        while(tokensIterator.hasNext()) {
+            String token = tokensIterator.next();
+            if(keywords.containsKey(token)){
+                code_printout.add(keywords.get(token));
+
+            }
+
+            if(operators.containsKey(token)){
+                code_printout.add(operators.get(token));
+            }
+
+            //This deals with end of line and end of function.
+            //They will just be entered as 0 into the arraylist
+            if(token.equals("EOL") || token.equals("EOF")){
+                code_printout.add(0);
+            }
+        }
+
+        //Print out the code range for each token
+        for(int i =0; i<code_printout.size();i++){
+            if(code_printout.get(i) == 0){
+                System.out.print("\n");
+            }
+            System.out.print(code_printout.get(i));
+        }
+
+
 
 
         // Use the txt file in the project root, stops tomcat from creating a different one
@@ -126,10 +189,9 @@ public class CompileServlet extends HttpServlet {
         tokenWriter.write( tokenString );
 
         // close
-        reqBodyReader.close();
         user_input.close();
+        reqBodyReader.close();
         tokenWriter.close();
-
 
         // format response
         resp.setContentType("text/html");
