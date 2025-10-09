@@ -119,15 +119,6 @@ public class CompileServlet extends HttpServlet {
 
         String tokenString = tokenJoiner.toString();
 
-        //Creating a list of keywords and operators
-        /*
-        List<String> keywords = new ArrayList<>();
-        keywords.add("if");
-        keywords.add("else");
-        keywords.add("for");
-        keywords.add("while");
-        keywords.add("do");
-         */
         Map<String,Integer> keywords = new HashMap<>();
         keywords.put("if", 100);
         keywords.put("else", 101);
@@ -142,39 +133,46 @@ public class CompileServlet extends HttpServlet {
         operators.put("/", 203);
         operators.put("=", 204);
 
+        Map<String, Integer> variables = new HashMap<>();
+        Integer newVariableEncodingNumber = 299;
 
         //This is the arraylist that will contain the operators and keywords for the tokens
         List<Integer> code_printout = new ArrayList<>();
-//        tokenListIterator =
         Iterator<String> tokensIterator = tokens.iterator();
 
-        while(tokensIterator.hasNext()) {
+        while (tokensIterator.hasNext()) {
             String token = tokensIterator.next();
-            if(keywords.containsKey(token)){
-                code_printout.add(keywords.get(token));
+            System.out.print(token + ": ");
 
+            if(keywords.containsKey(token)) {
+                code_printout.add(keywords.get(token));
+                System.out.println(keywords.get(token));
             }
 
-            if(operators.containsKey(token)){
+            else if(operators.containsKey(token)) {
                 code_printout.add(operators.get(token));
+                System.out.println(operators.get(token));
             }
 
             //This deals with end of line and end of function.
             //They will just be entered as 0 into the arraylist
-            if(token.equals("EOL") || token.equals("EOF")){
+            else if(token.equals("EOL") || token.equals("EOF")) {
                 code_printout.add(0);
+                System.out.println("0");
+            }
+
+            // new variable
+            else if (variables.containsKey(token)) {
+                code_printout.add(variables.get(token));
+                System.out.println(variables.get(token));
+            }
+
+            // old variable
+            else {
+                variables.put(token, newVariableEncodingNumber++);
+                System.out.println(newVariableEncodingNumber);
             }
         }
-
-        //Print out the code range for each token
-        for(int i =0; i<code_printout.size();i++){
-            if(code_printout.get(i) == 0){
-                System.out.print("\n");
-            }
-            System.out.print(code_printout.get(i));
-        }
-
-
 
 
         // Use the txt file in the project root, stops tomcat from creating a different one
