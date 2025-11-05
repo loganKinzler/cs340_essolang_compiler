@@ -176,14 +176,6 @@ public class CompileServlet extends HttpServlet {
         while(tokenizer.hasMoreTokens()) {
             String token = tokenizer.nextToken();
 
-            /*
-            StringTokenizer opperationTokenizer = new StringTokenizer(token,
-                    "~`!@#$%^&*-_=+()[]{}:;'\",.<>/?\\|", true);
-
-            while (opperationTokenizer.hasMoreTokens())
-                tokenList.add( opperationTokenizer.nextToken() );
-        }
-        */
             Pattern pattern = Pattern.compile("\\+=|-=|\\*=|/=|\\*\\*|==|!=|>=|<=|[A-Za-z_][A-Za-z0-9_]*|\\d+|\\S");
             Matcher matcher = pattern.matcher(token);
 
