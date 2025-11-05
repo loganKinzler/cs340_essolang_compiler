@@ -46,6 +46,8 @@ import java.util.ArrayList;
 
 import java.util.Map;
 import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import edu.lkinzler.graphics.GraphicalInterpreter;
 import edu.lkinzler.utility.CSVReader;
@@ -174,16 +176,21 @@ public class CompileServlet extends HttpServlet {
         while(tokenizer.hasMoreTokens()) {
             String token = tokenizer.nextToken();
 
-            if (!token.matches(".*[~`!@#$%^&*\\-_=+()\\[\\]{}:;'\",.<>/?\\\\|].*")) {
-                tokenList.add(token);
-                continue;
-            }
-
+            /*
             StringTokenizer opperationTokenizer = new StringTokenizer(token,
                     "~`!@#$%^&*-_=+()[]{}:;'\",.<>/?\\|", true);
 
             while (opperationTokenizer.hasMoreTokens())
                 tokenList.add( opperationTokenizer.nextToken() );
+        }
+        */
+            Pattern pattern = Pattern.compile("\\+=|-=|\\*=|/=|\\*\\*|==|!=|>=|<=|[A-Za-z_][A-Za-z0-9_]*|\\d+|\\S");
+            Matcher matcher = pattern.matcher(token);
+
+            while(matcher.find()){
+                tokenList.add(matcher.group());
+            }
+
         }
 
         return tokenList;
