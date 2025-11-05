@@ -23,23 +23,148 @@ package edu.lkinzler.servlet;
  *******************************************************************/
 
 
-import java.io.BufferedReader;
 import java.io.IOException;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.io.BufferedReader;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import java.util.*;
+
+import java.util.Iterator;
+
+import java.util.StringTokenizer;
+import java.util.StringJoiner;
+
+import java.util.List;
+import java.util.ArrayList;
+
+import java.util.Map;
+import java.util.HashMap;
 
 import edu.lkinzler.graphics.GraphicalInterpreter;
-
+import edu.lkinzler.utility.CSVReader;
+import edu.lkinzler.utility.Pair;
 
 public class CompileServlet extends HttpServlet {
+
+    private HashMap<String, Integer> interpretAsEncodingTable(File csvFile) throws IOException {
+        HashMap<String, Integer> encodingTable = new HashMap<String, Integer>();
+        CSVReader csvReader = new CSVReader(csvFile);
+
+        List<String> line = csvReader.next();
+        Integer currentSequence = -1, lineNumber = 1;
+
+        while (line != null) {
+            switch (line.size()) {
+
+                // sequence is continued
+                case 1:
+
+                    // check if sequence has been started and the string is not missing
+                    if (currentSequence < 0)
+                        throw new IOException("Missing sequence initialization in encoding table. (Line: " + lineNumber + ")");
+
+                    // check if key is missing
+                    try {
+                        Integer.parseInt(line.get(0));
+                    }
+                    catch (NumberFormatException parsementError) {
+                        // add as new key-value pair in sequence
+                        encodingTable.put(line.get(0), currentSequence);
+                        currentSequence++;
+                        break;
+                    }
+
+                    // the key doesn't exist when the only value is an Integer (the class type of the value)
+                    throw new IOException("Missing key value in encoding table. (Line: " + lineNumber + ")");
+
+
+                // new sequence
+                case 2:
+
+                    // check if value is an integer
+                    try {
+                        currentSequence = Integer.parseInt(line.get(1));
+
+                        // check if sequence number isn't in the encoding table already
+                        if (encodingTable.containsValue(currentSequence))
+                            throw new IOException("Key already exists in table (" +
+                                    "Line: " + lineNumber + ")");
+
+                        // add as new sequence
+                        encodingTable.put(line.get(0), currentSequence);
+                        currentSequence++;
+                    }
+                    catch (NumberFormatException parsementError) {
+                        throw new IOException("Value in Key-Value pair is not of type Integer in encoding table. (Line: " + lineNumber + ")");
+                    }
+                break;
+            }
+
+            line = csvReader.next();
+            lineNumber++;
+        }
+
+        csvReader.close();
+        return encodingTable;
+    }
+
+    private HashMap<Pair<Integer, Integer>, String> interpretAsCONOtable(File csvFile, HashMap<String, Integer> encodingTable) throws IOException {
+        HashMap<Pair<Integer, Integer>, String> conoTable = new HashMap<Pair<Integer, Integer>, String>();
+        CSVReader csvReader = new CSVReader(csvFile);
+
+        List<String> line = csvReader.next();
+        Integer lineNumber = 1;
+
+        while (line != null) {
+            if (line.size() != 3)
+                throw new IOException("Missing opperand or product in CONO table. (Line: " + lineNumber + ")");
+
+            if ( !encodingTable.containsKey(line.get(0)) )
+                throw new IOException("First opperand is not a valid token. (Line: " + lineNumber + ")");
+
+            if ( !encodingTable.containsKey(line.get(1)) )
+                throw new IOException("Second opperand is not a valid token. (Line: " + lineNumber + ")");
+
+            conoTable.put(
+                    new Pair<Integer, Integer>(
+                            encodingTable.get(line.get(0)),
+                            encodingTable.get(line.get(1))),
+                    line.get(2));
+
+            line = csvReader.next();
+            lineNumber++;
+        }
+
+        csvReader.close();
+        return conoTable;
+    }
+
+    private ArrayList<Integer> encode(HashMap<String, Integer> encodingTable, ArrayList<String> tokens) {
+        ArrayList<Integer> codes = new ArrayList<Integer>();
+        Iterator<String> tokensIterator = tokens.iterator();
+        Integer newVariableEncodingNumber = 300;
+
+        while (tokensIterator.hasNext()) {
+            String token = tokensIterator.next();
+
+            // keyword, opperation, or old variable
+            if(encodingTable.containsKey(token))
+                codes.add(encodingTable.get(token));
+
+            // new variable
+            encodingTable.put(token, newVariableEncodingNumber);
+            newVariableEncodingNumber++;
+        }
+
+        return codes;
+    }
 
     private ArrayList<String> tokenize(String code) {
         ArrayList<String> tokenList = new ArrayList<String>();
@@ -76,6 +201,10 @@ public class CompileServlet extends HttpServlet {
 
     @Override
 	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+
+        // Use the txt file in the project root, stops tomcat from creating a different one
+        String projectPath = System.getProperty("user.dir");
+
 
         //Writing textarea string into a txt file
         BufferedReader reqBodyReader = req.getReader();
@@ -119,70 +248,27 @@ public class CompileServlet extends HttpServlet {
 
         String tokenString = tokenJoiner.toString();
 
-        Map<String,Integer> keywords = new HashMap<>();
-        keywords.put("if", 100);
-        keywords.put("else", 101);
-        keywords.put("for", 102);
-        keywords.put("while", 103);
-        keywords.put("do", 104);
 
-        Map<String,Integer> operators = new HashMap<>();
-        operators.put("+", 200);
-        operators.put("-", 201);
-        operators.put("*", 202);
-        operators.put("/", 203);
-        operators.put("=", 204);
+        // encode code
+        File encodingTableFile = new File(projectPath, "Encoding_Table.csv");
+        HashMap<String, Integer> encodingTable = interpretAsEncodingTable(encodingTableFile);
+        Integer newVariableEncodingNumber = 300;
 
-        Map<String, Integer> variables = new HashMap<>();
-        Integer newVariableEncodingNumber = 299;
+        // validate order of tokens
+        File conoTableFile = new File(projectPath, "CONO_Table.csv");
+        HashMap<Pair<Integer, Integer>, String> conoTable = interpretAsCONOtable(conoTableFile, encodingTable);
 
         //This is the arraylist that will contain the operators and keywords for the tokens
         List<Integer> code_printout = new ArrayList<>();
-        Iterator<String> tokensIterator = tokens.iterator();
 
-        while (tokensIterator.hasNext()) {
-            String token = tokensIterator.next();
-            System.out.print(token + ": ");
-
-            if(keywords.containsKey(token)) {
-                code_printout.add(keywords.get(token));
-                System.out.println(keywords.get(token));
-            }
-
-            else if(operators.containsKey(token)) {
-                code_printout.add(operators.get(token));
-                System.out.println(operators.get(token));
-            }
-
-            //This deals with end of line and end of function.
-            //They will just be entered as 0 into the arraylist
-            else if(token.equals("EOL") || token.equals("EOF")) {
-                code_printout.add(0);
-                System.out.println("0");
-            }
-
-            // new variable
-            else if (variables.containsKey(token)) {
-                code_printout.add(variables.get(token));
-                System.out.println(variables.get(token));
-            }
-
-            // old variable
-            else {
-                variables.put(token, newVariableEncodingNumber++);
-                System.out.println(newVariableEncodingNumber);
-            }
-        }
-
-
-        // Use the txt file in the project root, stops tomcat from creating a different one
-        String projectPath = System.getProperty("user.dir");
+        // encode variables
+        ArrayList<Integer> encodedTokens = encode(encodingTable, tokens);
 
         File userInputFile = new File(projectPath, "User_Input.txt");
         FileWriter user_input = new FileWriter(userInputFile);
         user_input.write( reqBodyStringBuilder.toString() );
 
-        File tokenFile = new File(projectPath, "User_Tokens.txt");
+        File tokenFile = new File(projectPath, "User_Encoded_Tokens.txt");
         FileWriter tokenWriter = new FileWriter(tokenFile);
         tokenWriter.write( tokenString );
 
