@@ -268,7 +268,7 @@ public class CompileServlet extends HttpServlet {
         FileWriter user_input = new FileWriter(userInputFile);
         user_input.write( reqBodyStringBuilder.toString() );
 
-        File tokenFile = new File(projectPath, "User_Tokens.txt");
+        File tokenFile = new File(projectPath, "User_Encoded_Tokens.txt");
         FileWriter tokenWriter = new FileWriter(tokenFile);
         tokenWriter.write( tokenString );
 
