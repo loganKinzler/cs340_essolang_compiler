@@ -6,8 +6,8 @@ package edu.lkinzler.servlet;
  *                                                                  *
  * PROGRAMMER: Evan Natale & Logan Kinzler                          *
  * COURSE: CS340 - Programming Language Design                      *
- * DATE: 09/10/25                                                   *
- * REQUIREMENT: 3                                                   *
+ * DATE: 11/06/25                                                   *
+ * REQUIREMENT: 7                                                   *
  *                                                                  *
  * DESCRIPTION:                                                     *
  * This is a dynamic webserver that hosts an online IDE for an      *
@@ -36,22 +36,33 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 
-import java.util.Iterator;
+import java.util.*;
 
-import java.util.StringTokenizer;
-import java.util.StringJoiner;
-
-import java.util.List;
-import java.util.ArrayList;
-
-import java.util.Map;
-import java.util.HashMap;
+import edu.lkinzler.compiler.Validator;
 
 import edu.lkinzler.graphics.GraphicalInterpreter;
+
 import edu.lkinzler.utility.CSVReader;
 import edu.lkinzler.utility.Pair;
+import edu.lkinzler.utility.functions.ConstantCategorizer;
+import edu.lkinzler.utility.functions.InstructionCategorizer;
+import edu.lkinzler.utility.functions.OpperationCategorizer;
+import edu.lkinzler.utility.functions.VariableCategorizer;
+
+
 
 public class CompileServlet extends HttpServlet {
+
+    /***********************************************************
+     * METHOD: interpretAsEncodingTable                        *
+     * DESCRIPTION: This takes in a CSV file that describes    *
+     *     the mappings from valid tokens to instruction codes *
+     *     and outputs the list of mappings.                   *
+     * PARAMETERS: File csvFile,                               *
+     *     HashMap<String, Integer> encodingTable,             *
+     *     List<InstructionCategorizer> instructionCategories  *
+     * RETURN VALUE: ArrayList<Pair<Integer, Intger>, String>> *
+     **********************************************************/
 
     private HashMap<String, Integer> interpretAsEncodingTable(File csvFile) throws IOException {
         HashMap<String, Integer> encodingTable = new HashMap<String, Integer>();
@@ -97,7 +108,7 @@ public class CompileServlet extends HttpServlet {
                             throw new IOException("Key already exists in table (" +
                                     "Line: " + lineNumber + ")");
 
-                        // add as new sequence
+                        // add as new variable
                         encodingTable.put(line.get(0), currentSequence);
                         currentSequence++;
                     }
@@ -115,7 +126,19 @@ public class CompileServlet extends HttpServlet {
         return encodingTable;
     }
 
-    private HashMap<Pair<Integer, Integer>, String> interpretAsCONOtable(File csvFile, HashMap<String, Integer> encodingTable) throws IOException {
+
+    /***********************************************************
+     * METHOD: interpretAsCONOtable                            *
+     * DESCRIPTION: This takes in a CSV file that describes    *
+     *     the valid sequence of instructions for the provided *
+     *     essolang.                                           *
+     * PARAMETERS: File csvFile,                               *
+     *     HashMap<String, Integer> encodingTable,             *
+     *     List<InstructionCategorizer> instructionCategories  *
+     * RETURN VALUE: HashMap<Pair<Integer, Integer>, String>   *
+     **********************************************************/
+
+    private HashMap<Pair<Integer, Integer>, String> interpretAsCONOtable(File csvFile, HashMap<String, Integer> encodingTable, List<InstructionCategorizer> instructionCategories) throws IOException {
         HashMap<Pair<Integer, Integer>, String> conoTable = new HashMap<Pair<Integer, Integer>, String>();
         CSVReader csvReader = new CSVReader(csvFile);
 
@@ -126,17 +149,37 @@ public class CompileServlet extends HttpServlet {
             if (line.size() != 3)
                 throw new IOException("Missing opperand or product in CONO table. (Line: " + lineNumber + ")");
 
-            if ( !encodingTable.containsKey(line.get(0)) )
+            List<String> finalLine = line;
+            if ( !encodingTable.containsKey(line.get(0)) &&
+                    instructionCategories.stream().noneMatch(
+                            (InstructionCategorizer category) -> category.getLabel().equals(finalLine.get(0))))
                 throw new IOException("First opperand is not a valid token. (Line: " + lineNumber + ")");
 
-            if ( !encodingTable.containsKey(line.get(1)) )
+            if ( !encodingTable.containsKey(line.get(1)) &&
+                    instructionCategories.stream().noneMatch(
+                            (InstructionCategorizer category) -> category.getLabel().equals(finalLine.get(1))))
                 throw new IOException("Second opperand is not a valid token. (Line: " + lineNumber + ")");
 
-            conoTable.put(
-                    new Pair<Integer, Integer>(
-                            encodingTable.get(line.get(0)),
-                            encodingTable.get(line.get(1))),
-                    line.get(2));
+
+
+            Integer encodeOne = null, encodeTwo = null;
+
+            for (InstructionCategorizer category : instructionCategories) {
+                if (category.getLabel().equals(line.get(0)))
+                    encodeOne = category.getInstruction();
+
+                if (category.getLabel().equals(line.get(1)))
+                    encodeTwo = category.getInstruction();
+            }
+
+            if (encodeOne == null)
+                encodeOne = encodingTable.get(line.get(0));
+
+            if (encodeTwo == null)
+                encodeTwo = encodingTable.get(line.get(1));
+
+
+            conoTable.put( new Pair<Integer, Integer>(encodeOne, encodeTwo), line.get(2) );
 
             line = csvReader.next();
             lineNumber++;
@@ -146,25 +189,56 @@ public class CompileServlet extends HttpServlet {
         return conoTable;
     }
 
+
+    /***********************************************************
+     * METHOD: encode                                          *
+     * DESCRIPTION: This takes in the tokens and a mapping     *
+     *     from the token to a unique number.                  *
+     * PARAMETERS: HashMap<String, Integer> encodingTable,     *
+     *     ArrayList<String> tokens                            *
+     * RETURN VALUE: ArrayList<Integer>                        *
+     **********************************************************/
+
     private ArrayList<Integer> encode(HashMap<String, Integer> encodingTable, ArrayList<String> tokens) {
         ArrayList<Integer> codes = new ArrayList<Integer>();
         Iterator<String> tokensIterator = tokens.iterator();
         Integer newVariableEncodingNumber = 300;
+        Integer newConstantEncodingNumber = 600;
 
         while (tokensIterator.hasNext()) {
             String token = tokensIterator.next();
 
             // keyword, opperation, or old variable
-            if(encodingTable.containsKey(token))
+            if(encodingTable.containsKey(token)) {
                 codes.add(encodingTable.get(token));
+                continue;
+            }
+
+            // new constant
+            try {Integer.parseInt(token);}
+            catch (NumberFormatException nfe) {
+                encodingTable.put(token, newConstantEncodingNumber);
+                codes.add(newConstantEncodingNumber);
+                newConstantEncodingNumber++;
+            }
 
             // new variable
             encodingTable.put(token, newVariableEncodingNumber);
+            codes.add(newVariableEncodingNumber);
             newVariableEncodingNumber++;
         }
 
         return codes;
     }
+
+
+    /***********************************************************
+     * METHOD: tokenize                                        *
+     * DESCRIPTION: This takes in the essolang code in its     *
+     *     entirety and returns it as a list of tokens.        *
+     * PARAMETERS: String code                                 *
+     * RETURN VALUE: ArrayList<String>                         *
+     **********************************************************/
 
     private ArrayList<String> tokenize(String code) {
         ArrayList<String> tokenList = new ArrayList<String>();
@@ -193,9 +267,10 @@ public class CompileServlet extends HttpServlet {
     /***********************************************************
      * METHOD: doPost                                          *
      * DESCRIPTION: This receives HTTP POST requests &         *
-     *     tokenizes the given esolang code, responding with   *
-     *     a trace of the compiled code.                       *
-     * PARAMETERS: HttpServletRequest, HttpServletResponse     *
+     *     tokenizes, encodes, and verifies the structure of   *
+     *     the given essolang code, responding with a trace of *
+     *     the compiled code.                                  *
+     * PARAMETERS: HttpServletRequest q, HttpServletResponse p *
      * RETURN VALUE: void                                      *
      **********************************************************/
 
@@ -226,7 +301,6 @@ public class CompileServlet extends HttpServlet {
         }
 
 
-
         // remove the last line (which is empty)
         traceOutputBuilder.deleteCharAt(traceOutputBuilder.length() - 1);
         reqBodyStringBuilder.deleteCharAt(reqBodyStringBuilder.length() - 1);
@@ -239,46 +313,78 @@ public class CompileServlet extends HttpServlet {
         //Add EOF at the end of code
         code += "\nEOF";
 
+
         // tokenize code
         ArrayList<String> tokens = tokenize(code);
-
         StringJoiner tokenJoiner = new StringJoiner("\n", "", "");
+
         for (String token : tokens)
             tokenJoiner.add(token);
 
-        String tokenString = tokenJoiner.toString();
 
-
-        // encode code
+        // import encoding table
         File encodingTableFile = new File(projectPath, "Encoding_Table.csv");
         HashMap<String, Integer> encodingTable = interpretAsEncodingTable(encodingTableFile);
-        Integer newVariableEncodingNumber = 300;
 
-        // validate order of tokens
+        // encode tokens to instructions
+        ArrayList<Integer> instructions = encode(encodingTable, tokens);
+
+        // gather sequence labels
+        ArrayList<InstructionCategorizer> instructionCategories = new ArrayList<InstructionCategorizer>();
+        instructionCategories.add(new OpperationCategorizer());
+        instructionCategories.add(new VariableCategorizer());
+        instructionCategories.add(new ConstantCategorizer());
+
+        // import CONO table
         File conoTableFile = new File(projectPath, "CONO_Table.csv");
-        HashMap<Pair<Integer, Integer>, String> conoTable = interpretAsCONOtable(conoTableFile, encodingTable);
+        HashMap<Pair<Integer, Integer>, String> conoTable = interpretAsCONOtable(conoTableFile, encodingTable, instructionCategories);
+
+
+        // validate instruction set
+        Validator instructionValidator = new Validator(encodingTable, conoTable);
+        Boolean instructionsAreValid = instructionValidator.validate(instructions);
+        // TODO: let user know if code compiled successfully
+
 
         //This is the arraylist that will contain the operators and keywords for the tokens
         List<Integer> code_printout = new ArrayList<>();
+        // TODO: make comprehensive printout
 
-        // encode variables
-        ArrayList<Integer> encodedTokens = encode(encodingTable, tokens);
 
+        // save user input
         File userInputFile = new File(projectPath, "User_Input.txt");
         FileWriter user_input = new FileWriter(userInputFile);
         user_input.write( reqBodyStringBuilder.toString() );
 
-        File tokenFile = new File(projectPath, "User_Encoded_Tokens.txt");
+
+        // save tokens
+        File tokenFile = new File(projectPath, "User_Tokens.txt");
         FileWriter tokenWriter = new FileWriter(tokenFile);
-        tokenWriter.write( tokenString );
+        tokenWriter.write( tokenJoiner.toString() );
+
+
+        // save instructions
+        Iterator<Integer> instructionsIterator = instructions.iterator();
+        StringJoiner instructionsString = new StringJoiner("\n");
+
+        while (instructionsIterator.hasNext())
+            instructionsString.add(instructionsIterator.next().toString());
+
+        File instructionsFile = new File(projectPath, "User_Instructions.txt");
+        FileWriter instructionsWriter = new FileWriter(instructionsFile);
+        instructionsWriter.write( instructionsString.toString() );
+
 
         // close
         user_input.close();
         reqBodyReader.close();
         tokenWriter.close();
+        instructionsWriter.close();
+
 
         // format response
         resp.setContentType("text/html");
+
 
         // write
         PrintWriter respBodyWriter = resp.getWriter();
