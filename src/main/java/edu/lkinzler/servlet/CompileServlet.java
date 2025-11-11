@@ -341,7 +341,7 @@ public class CompileServlet extends HttpServlet {
 
 
         // validate instruction set
-        Validator instructionValidator = new Validator(encodingTable, conoTable);
+        Validator instructionValidator = new Validator(encodingTable, conoTable, instructionCategories);
         Boolean instructionsAreValid = instructionValidator.validate(instructions);
         // TODO: let user know if code compiled successfully
 

@@ -6,17 +6,21 @@ import java.util.Map;
 import java.util.Stack;
 
 import edu.lkinzler.utility.Pair;
+import edu.lkinzler.utility.functions.InstructionCategorizer;
 
 public class Validator {
     private final Map<String, Integer> encodingTable;
     private final Map<Pair<Integer, Integer>, String> CONOtable;
+    private final List<InstructionCategorizer> categories;
 
 
     public Validator(Map<String, Integer> encodingTable,
-                     Map<Pair<Integer, Integer>, String> CONOtable) {
+                     Map<Pair<Integer, Integer>, String> CONOtable,
+                     List<InstructionCategorizer> categories) {
 
         this.encodingTable = encodingTable;
         this.CONOtable = CONOtable;
+        this.categories = categories;
     }
 
 
@@ -37,6 +41,12 @@ public class Validator {
 //        return true;
 //    }
 
+    private Integer categorizeInstruction(Integer instruction) {
+        for (InstructionCategorizer ic : categories)
+            if (ic.withinCategory(instruction))
+                return ic.categorize(instruction);
+        return instruction;
+    }
 
     /***********************************************************
      * METHOD: validateOrder                                   *
@@ -65,9 +75,8 @@ public class Validator {
 
             // sequence is valid
             if (CONOtable.containsKey(new Pair<Integer, Integer>(
-                    Math.min(previousInstruction, 300),
-                    Math.min(currentInstruction, 300)
-            )))
+                    categorizeInstruction( previousInstruction ),
+                    categorizeInstruction( currentInstruction ))))
                 continue;
 
             // sequence is not valid
