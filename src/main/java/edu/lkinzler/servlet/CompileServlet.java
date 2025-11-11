@@ -38,6 +38,13 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.util.*;
 
+import java.util.List;
+import java.util.ArrayList;
+
+import java.util.Map;
+import java.util.HashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import edu.lkinzler.compiler.Validator;
 
 import edu.lkinzler.graphics.GraphicalInterpreter;
@@ -248,16 +255,13 @@ public class CompileServlet extends HttpServlet {
         while(tokenizer.hasMoreTokens()) {
             String token = tokenizer.nextToken();
 
-            if (!token.matches(".*[~`!@#$%^&*\\-_=+()\\[\\]{}:;'\",.<>/?\\\\|].*")) {
-                tokenList.add(token);
-                continue;
+            Pattern pattern = Pattern.compile("\\+=|-=|\\*=|/=|\\*\\*|==|!=|>=|<=|[A-Za-z_][A-Za-z0-9_]*|\\d+|\\S");
+            Matcher matcher = pattern.matcher(token);
+
+            while(matcher.find()){
+                tokenList.add(matcher.group());
             }
 
-            StringTokenizer opperationTokenizer = new StringTokenizer(token,
-                    "~`!@#$%^&*-_=+()[]{}:;'\",.<>/?\\|", true);
-
-            while (opperationTokenizer.hasMoreTokens())
-                tokenList.add( opperationTokenizer.nextToken() );
         }
 
         return tokenList;
