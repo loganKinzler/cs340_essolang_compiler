@@ -12,15 +12,18 @@ public class Validator {
     private final Map<String, Integer> encodingTable;
     private final Map<Pair<Integer, Integer>, String> CONOtable;
     private final List<InstructionCategorizer> categories;
+    private TraceOutputBuilder outputBuilder;
 
 
     public Validator(Map<String, Integer> encodingTable,
                      Map<Pair<Integer, Integer>, String> CONOtable,
-                     List<InstructionCategorizer> categories) {
+                     List<InstructionCategorizer> categories,
+                     TraceOutputBuilder outputBuilder) {
 
         this.encodingTable = encodingTable;
         this.CONOtable = CONOtable;
         this.categories = categories;
+        this.outputBuilder = outputBuilder;
     }
 
 
@@ -59,7 +62,7 @@ public class Validator {
     private Boolean validateOrder(List<Integer> instructions) {
         Iterator<Integer> instructionInterator = instructions.iterator();
         Integer previousInstruction;
-        Integer currentInstruction;
+        Integer currentInstruction = 0;
 
         // initialize previous instruction
         if (instructionInterator.hasNext())
@@ -70,14 +73,33 @@ public class Validator {
             return true;
 
 
+        Integer line = 0;
         while (instructionInterator.hasNext()) {
             currentInstruction = instructionInterator.next();
 
             // sequence is valid
             if (CONOtable.containsKey(new Pair<Integer, Integer>(
                     categorizeInstruction( previousInstruction ),
-                    categorizeInstruction( currentInstruction ))))
+                    categorizeInstruction( currentInstruction )))) {
+
+                if (currentInstruction == 0 || currentInstruction == 1){
+                    line++;
+                    previousInstruction = currentInstruction;
+                    continue;
+                }
+
+                if (previousInstruction == 0) {
+                    previousInstruction = currentInstruction;
+                    continue;
+                }
+
+                outputBuilder.addCodeGeneratorToLine(CONOtable.get(new Pair<Integer, Integer>(
+                        categorizeInstruction( previousInstruction ),
+                        categorizeInstruction( currentInstruction ))), line);
+
+                previousInstruction = currentInstruction;
                 continue;
+            }
 
             // sequence is not valid
             return false;

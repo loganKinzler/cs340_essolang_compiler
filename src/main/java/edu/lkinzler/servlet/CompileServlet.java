@@ -45,6 +45,8 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import edu.lkinzler.compiler.TraceOutputBuilder;
 import edu.lkinzler.compiler.Validator;
 
 import edu.lkinzler.graphics.GraphicalInterpreter;
@@ -215,24 +217,27 @@ public class CompileServlet extends HttpServlet {
         while (tokensIterator.hasNext()) {
             String token = tokensIterator.next();
 
-            // keyword, opperation, or old variable
+            // keyword, opperation, or old variable/constant
             if(encodingTable.containsKey(token)) {
                 codes.add(encodingTable.get(token));
                 continue;
             }
 
-            // new constant
+            // new variable
             try {Integer.parseInt(token);}
             catch (NumberFormatException nfe) {
-                encodingTable.put(token, newConstantEncodingNumber);
-                codes.add(newConstantEncodingNumber);
-                newConstantEncodingNumber++;
+
+                // variables won't get parsed to an integer properly
+                encodingTable.put(token, newVariableEncodingNumber);
+                codes.add(newVariableEncodingNumber);
+                newVariableEncodingNumber++;
+                continue;
             }
 
-            // new variable
-            encodingTable.put(token, newVariableEncodingNumber);
-            codes.add(newVariableEncodingNumber);
-            newVariableEncodingNumber++;
+            // new constant
+            encodingTable.put(token, newConstantEncodingNumber);
+            codes.add(newConstantEncodingNumber);
+            newConstantEncodingNumber++;
         }
 
         return codes;
@@ -290,13 +295,11 @@ public class CompileServlet extends HttpServlet {
         String line = reqBodyReader.readLine();
 
         StringBuilder reqBodyStringBuilder = new StringBuilder();
-        StringBuilder traceOutputBuilder = new StringBuilder();
+        TraceOutputBuilder traceOutput = new TraceOutputBuilder();
         int lineNum = 1;
 
         while (line != null) {
-            traceOutputBuilder.append( String.format("Line #%d: ", lineNum) );
-            traceOutputBuilder.append(line);
-            traceOutputBuilder.append("\n");
+            traceOutput.addNewLine(line);
             lineNum++;
 
             reqBodyStringBuilder.append(line);
@@ -306,7 +309,6 @@ public class CompileServlet extends HttpServlet {
 
 
         // remove the last line (which is empty)
-        traceOutputBuilder.deleteCharAt(traceOutputBuilder.length() - 1);
         reqBodyStringBuilder.deleteCharAt(reqBodyStringBuilder.length() - 1);
 
 
@@ -322,9 +324,16 @@ public class CompileServlet extends HttpServlet {
         ArrayList<String> tokens = tokenize(code);
         StringJoiner tokenJoiner = new StringJoiner("\n", "", "");
 
+        Integer outputLine = 0;
         for (String token : tokens)
-            tokenJoiner.add(token);
+        {
+            if (token.equals("EOL") || token.equals("EOF"))
+                outputLine++;
+            else
+                traceOutput.addTokenToLine(token, outputLine);
 
+            tokenJoiner.add(token);
+        }
 
         // import encoding table
         File encodingTableFile = new File(projectPath, "Encoding_Table.csv");
@@ -332,6 +341,18 @@ public class CompileServlet extends HttpServlet {
 
         // encode tokens to instructions
         ArrayList<Integer> instructions = encode(encodingTable, tokens);
+        System.out.println(instructions.toString());
+        outputLine = 0;
+
+        for (Integer instruct : instructions)
+        {
+            if (instruct == 0 || instruct == 1)
+                outputLine++;
+            else
+                traceOutput.addInstructionToLine(instruct, outputLine);
+
+        }
+
 
         // gather sequence labels
         ArrayList<InstructionCategorizer> instructionCategories = new ArrayList<InstructionCategorizer>();
@@ -345,15 +366,10 @@ public class CompileServlet extends HttpServlet {
 
 
         // validate instruction set
-        Validator instructionValidator = new Validator(encodingTable, conoTable, instructionCategories);
+        Validator instructionValidator = new Validator(encodingTable, conoTable, instructionCategories, traceOutput);
         Boolean instructionsAreValid = instructionValidator.validate(instructions);
         // TODO: let user know if code compiled successfully
-
-
-        //This is the arraylist that will contain the operators and keywords for the tokens
-        List<Integer> code_printout = new ArrayList<>();
-        // TODO: make comprehensive printout
-
+        System.out.printf("Valid Instruction Set: %b\n", instructionsAreValid);
 
         // save user input
         File userInputFile = new File(projectPath, "User_Input.txt");
@@ -392,7 +408,7 @@ public class CompileServlet extends HttpServlet {
 
         // write
         PrintWriter respBodyWriter = resp.getWriter();
-        respBodyWriter.print( traceOutputBuilder.toString());
+        respBodyWriter.print( traceOutput );
         respBodyWriter.close();
 	}
 }

@@ -21,7 +21,7 @@ function compile($) {
         return response.text();
 
     }).then (body => {
-        trace_output.innerHTML = body + "\nCompiling...\n";
+        trace_output.innerHTML = "Compiling...\n" + body + "Compiled!\n\n";
 
     }).catch(error => {
         console.log("Error: ", error);
