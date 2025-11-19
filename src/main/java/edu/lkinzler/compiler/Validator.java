@@ -13,17 +13,19 @@ public class Validator {
     private final Map<Pair<Integer, Integer>, String> CONOtable;
     private final List<InstructionCategorizer> categories;
     private TraceOutputBuilder outputBuilder;
+    private List<String> codeGenerators;
 
 
     public Validator(Map<String, Integer> encodingTable,
                      Map<Pair<Integer, Integer>, String> CONOtable,
                      List<InstructionCategorizer> categories,
-                     TraceOutputBuilder outputBuilder) {
+                     TraceOutputBuilder outputBuilder, List<String> codeGenerators) {
 
         this.encodingTable = encodingTable;
         this.CONOtable = CONOtable;
         this.categories = categories;
         this.outputBuilder = outputBuilder;
+        this.codeGenerators = codeGenerators;
     }
 
 
@@ -77,6 +79,10 @@ public class Validator {
         while (instructionInterator.hasNext()) {
             currentInstruction = instructionInterator.next();
 
+            codeGenerators.add(CONOtable.get(new Pair<Integer, Integer>(
+                    categorizeInstruction( previousInstruction ),
+                    categorizeInstruction( currentInstruction ))));
+
             // sequence is valid
             if (CONOtable.containsKey(new Pair<Integer, Integer>(
                     categorizeInstruction( previousInstruction ),
@@ -93,6 +99,8 @@ public class Validator {
                     continue;
                 }
 
+
+
                 outputBuilder.addCodeGeneratorToLine(CONOtable.get(new Pair<Integer, Integer>(
                         categorizeInstruction( previousInstruction ),
                         categorizeInstruction( currentInstruction ))), line);
@@ -107,5 +115,10 @@ public class Validator {
 
         // total sequence is valid
         return true;
+    }
+
+    //Getters
+    public List<String> getCodeGenerators() {
+        return codeGenerators;
     }
 }

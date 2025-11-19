@@ -1,7 +1,14 @@
 package edu.lkinzler.servlet;
 
 
+import edu.lkinzler.compiler.Validator;
 import edu.lkinzler.graphics.GraphicalInterpreter;
+import edu.lkinzler.utility.CSVReader;
+import edu.lkinzler.utility.Pair;
+import edu.lkinzler.utility.functions.ConstantCategorizer;
+import edu.lkinzler.utility.functions.InstructionCategorizer;
+import edu.lkinzler.utility.functions.OpperationCategorizer;
+import edu.lkinzler.utility.functions.VariableCategorizer;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -9,6 +16,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Scanner;
 
 
@@ -30,12 +39,41 @@ public class RunServlet extends HttpServlet {
         StringBuilder graphicsHTML = new StringBuilder();
         StringBuilder graphicsAnimation = new StringBuilder();
         GraphicalInterpreter graphicsInterpreter = new GraphicalInterpreter();
+        CompileServlet compileServlet = new CompileServlet();
+
 
         String projectPath = System.getProperty("user.dir");
         File tokenFile = new File(projectPath, "User_Tokens.txt");
+
         Scanner tokenScan = new Scanner(tokenFile);
 
+        // import encoding table
+        File encodingTableFile = new File(projectPath, "Encoding_Table.csv");
+        CSVReader encodingTableReader = new CSVReader(encodingTableFile);
+        HashMap<String, Integer> encodingTable = encodingTableReader.interpretAsEncodingTable();
+        encodingTableReader.close();
 
+        // gather sequence labels
+        ArrayList<InstructionCategorizer> instructionCategories = new ArrayList<InstructionCategorizer>();
+        instructionCategories.add(new OpperationCategorizer());
+        instructionCategories.add(new VariableCategorizer());
+        instructionCategories.add(new ConstantCategorizer());
+
+        // import CONO table
+        File conoTableFile = new File(projectPath, "CONO_Table.csv");
+        CSVReader conoTableReader = new CSVReader(conoTableFile);
+        HashMap<Pair<Integer, Integer>, String> conoTable = conoTableReader.interpretAsCONOtable(encodingTable, instructionCategories);
+        conoTableReader.close();
+
+        Validator validator = new Validator(encodingTable, conoTable, instructionCategories, );
+
+
+
+        if(compileServlet.instructionsAreValid == true){
+
+        }
+
+        /*
         while (tokenScan.hasNextLine()) {
             String token = tokenScan.nextLine();
 
@@ -71,5 +109,9 @@ public class RunServlet extends HttpServlet {
                         "\"\n}"
         );
         respBodyWriter.close();
+
+         */
 	}
+
+
 }

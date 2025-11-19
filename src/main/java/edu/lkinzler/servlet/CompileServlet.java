@@ -62,142 +62,11 @@ import edu.lkinzler.utility.functions.VariableCategorizer;
 
 public class CompileServlet extends HttpServlet {
 
-    /***********************************************************
-     * METHOD: interpretAsEncodingTable                        *
-     * DESCRIPTION: This takes in a CSV file that describes    *
-     *     the mappings from valid tokens to instruction codes *
-     *     and outputs the list of mappings.                   *
-     * PARAMETERS: File csvFile,                               *
-     *     HashMap<String, Integer> encodingTable,             *
-     *     List<InstructionCategorizer> instructionCategories  *
-     * RETURN VALUE: ArrayList<Pair<Integer, Intger>, String>> *
-     **********************************************************/
 
-    private HashMap<String, Integer> interpretAsEncodingTable(File csvFile) throws IOException {
-        HashMap<String, Integer> encodingTable = new HashMap<String, Integer>();
-        CSVReader csvReader = new CSVReader(csvFile);
-
-        List<String> line = csvReader.next();
-        Integer currentSequence = -1, lineNumber = 1;
-
-        while (line != null) {
-            switch (line.size()) {
-
-                // sequence is continued
-                case 1:
-
-                    // check if sequence has been started and the string is not missing
-                    if (currentSequence < 0)
-                        throw new IOException("Missing sequence initialization in encoding table. (Line: " + lineNumber + ")");
-
-                    // check if key is missing
-                    try {
-                        Integer.parseInt(line.get(0));
-                    }
-                    catch (NumberFormatException parsementError) {
-                        // add as new key-value pair in sequence
-                        encodingTable.put(line.get(0), currentSequence);
-                        currentSequence++;
-                        break;
-                    }
-
-                    // the key doesn't exist when the only value is an Integer (the class type of the value)
-                    throw new IOException("Missing key value in encoding table. (Line: " + lineNumber + ")");
-
-
-                // new sequence
-                case 2:
-
-                    // check if value is an integer
-                    try {
-                        currentSequence = Integer.parseInt(line.get(1));
-
-                        // check if sequence number isn't in the encoding table already
-                        if (encodingTable.containsValue(currentSequence))
-                            throw new IOException("Key already exists in table (" +
-                                    "Line: " + lineNumber + ")");
-
-                        // add as new variable
-                        encodingTable.put(line.get(0), currentSequence);
-                        currentSequence++;
-                    }
-                    catch (NumberFormatException parsementError) {
-                        throw new IOException("Value in Key-Value pair is not of type Integer in encoding table. (Line: " + lineNumber + ")");
-                    }
-                break;
-            }
-
-            line = csvReader.next();
-            lineNumber++;
-        }
-
-        csvReader.close();
-        return encodingTable;
-    }
-
-
-    /***********************************************************
-     * METHOD: interpretAsCONOtable                            *
-     * DESCRIPTION: This takes in a CSV file that describes    *
-     *     the valid sequence of instructions for the provided *
-     *     essolang.                                           *
-     * PARAMETERS: File csvFile,                               *
-     *     HashMap<String, Integer> encodingTable,             *
-     *     List<InstructionCategorizer> instructionCategories  *
-     * RETURN VALUE: HashMap<Pair<Integer, Integer>, String>   *
-     **********************************************************/
-
-    private HashMap<Pair<Integer, Integer>, String> interpretAsCONOtable(File csvFile, HashMap<String, Integer> encodingTable, List<InstructionCategorizer> instructionCategories) throws IOException {
-        HashMap<Pair<Integer, Integer>, String> conoTable = new HashMap<Pair<Integer, Integer>, String>();
-        CSVReader csvReader = new CSVReader(csvFile);
-
-        List<String> line = csvReader.next();
-        Integer lineNumber = 1;
-
-        while (line != null) {
-            if (line.size() != 3)
-                throw new IOException("Missing opperand or product in CONO table. (Line: " + lineNumber + ")");
-
-            List<String> finalLine = line;
-            if ( !encodingTable.containsKey(line.get(0)) &&
-                    instructionCategories.stream().noneMatch(
-                            (InstructionCategorizer category) -> category.getLabel().equals(finalLine.get(0))))
-                throw new IOException("First opperand is not a valid token. (Line: " + lineNumber + ")");
-
-            if ( !encodingTable.containsKey(line.get(1)) &&
-                    instructionCategories.stream().noneMatch(
-                            (InstructionCategorizer category) -> category.getLabel().equals(finalLine.get(1))))
-                throw new IOException("Second opperand is not a valid token. (Line: " + lineNumber + ")");
-
-
-
-            Integer encodeOne = null, encodeTwo = null;
-
-            for (InstructionCategorizer category : instructionCategories) {
-                if (category.getLabel().equals(line.get(0)))
-                    encodeOne = category.getInstruction();
-
-                if (category.getLabel().equals(line.get(1)))
-                    encodeTwo = category.getInstruction();
-            }
-
-            if (encodeOne == null)
-                encodeOne = encodingTable.get(line.get(0));
-
-            if (encodeTwo == null)
-                encodeTwo = encodingTable.get(line.get(1));
-
-
-            conoTable.put( new Pair<Integer, Integer>(encodeOne, encodeTwo), line.get(2) );
-
-            line = csvReader.next();
-            lineNumber++;
-        }
-
-        csvReader.close();
-        return conoTable;
-    }
-
+    //Fields
+    //This is so that the RunServlet can check if it's valid
+    //public Validator instructionValidator;
+    public Boolean instructionsAreValid;
 
     /***********************************************************
      * METHOD: encode                                          *
@@ -337,7 +206,9 @@ public class CompileServlet extends HttpServlet {
 
         // import encoding table
         File encodingTableFile = new File(projectPath, "Encoding_Table.csv");
-        HashMap<String, Integer> encodingTable = interpretAsEncodingTable(encodingTableFile);
+        CSVReader encodingTableReader = new CSVReader(encodingTableFile);
+        HashMap<String, Integer> encodingTable = encodingTableReader.interpretAsEncodingTable();
+        encodingTableReader.close();
 
         // encode tokens to instructions
         ArrayList<Integer> instructions = encode(encodingTable, tokens);
@@ -360,14 +231,25 @@ public class CompileServlet extends HttpServlet {
         instructionCategories.add(new VariableCategorizer());
         instructionCategories.add(new ConstantCategorizer());
 
-        // import CONO table
-        File conoTableFile = new File(projectPath, "CONO_Table.csv");
-        HashMap<Pair<Integer, Integer>, String> conoTable = interpretAsCONOtable(conoTableFile, encodingTable, instructionCategories);
+           // import CONO table
+            File conoTableFile = new File(projectPath, "CONO_Table.csv");
+            CSVReader conoTableReader = new CSVReader(conoTableFile);
+            HashMap<Pair<Integer, Integer>, String> conoTable = conoTableReader.interpretAsCONOtable(encodingTable, instructionCategories);
+            conoTableReader.close();
+
+        List<String> codeGenerators = new ArrayList<>();
 
 
         // validate instruction set
-        Validator instructionValidator = new Validator(encodingTable, conoTable, instructionCategories, traceOutput);
-        Boolean instructionsAreValid = instructionValidator.validate(instructions);
+        Validator instructionValidator = new Validator(encodingTable, conoTable, instructionCategories, traceOutput, codeGenerators);
+        instructionsAreValid = instructionValidator.validate(instructions);
+
+
+        System.out.println("Generated Code: ");
+        for (String gen : instructionValidator.getCodeGenerators()) {
+            System.out.println("  " + gen);
+        }
+
         // TODO: let user know if code compiled successfully
         System.out.printf("Valid Instruction Set: %b\n", instructionsAreValid);
 
@@ -386,6 +268,14 @@ public class CompileServlet extends HttpServlet {
         // save instructions
         Iterator<Integer> instructionsIterator = instructions.iterator();
         StringJoiner instructionsString = new StringJoiner("\n");
+
+        //Save codeGenerators
+        File codeGeneratorsFile = new File(projectPath, "codeGenerators.txt");
+        FileWriter codeGenWriter = new FileWriter(codeGeneratorsFile);
+        codeGenWriter.write(
+                String.join("\n", instructionValidator.getCodeGenerators())
+        );
+        codeGenWriter.close();
 
         while (instructionsIterator.hasNext())
             instructionsString.add(instructionsIterator.next().toString());
