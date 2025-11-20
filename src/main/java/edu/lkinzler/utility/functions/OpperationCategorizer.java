@@ -6,7 +6,7 @@ public class OpperationCategorizer implements InstructionCategorizer{
     public Integer getInstruction() {return 201;}
 
     public Boolean withinCategory(Integer instruction) {
-        return instruction > getInstruction() && instruction < 300;
+        return instruction >= getInstruction() && instruction < 300;
     }
 
     public Integer categorize(Integer instruction) {

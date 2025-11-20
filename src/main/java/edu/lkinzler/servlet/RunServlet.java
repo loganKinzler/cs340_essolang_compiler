@@ -3,12 +3,11 @@ package edu.lkinzler.servlet;
 
 import edu.lkinzler.compiler.Validator;
 import edu.lkinzler.graphics.GraphicalInterpreter;
-import edu.lkinzler.utility.CSVReader;
-import edu.lkinzler.utility.Pair;
-import edu.lkinzler.utility.functions.ConstantCategorizer;
-import edu.lkinzler.utility.functions.InstructionCategorizer;
-import edu.lkinzler.utility.functions.OpperationCategorizer;
-import edu.lkinzler.utility.functions.VariableCategorizer;
+
+import edu.lkinzler.utility.*;
+import edu.lkinzler.utility.functions.*;
+import edu.lkinzler.utility.opperations.*;
+import org.junit.Ignore;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -33,66 +32,109 @@ public class RunServlet extends HttpServlet {
      **********************************************************/
 
     @Override
-	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-
-        StringBuilder codeLine = new StringBuilder();
-        StringBuilder graphicsHTML = new StringBuilder();
-        StringBuilder graphicsAnimation = new StringBuilder();
-        GraphicalInterpreter graphicsInterpreter = new GraphicalInterpreter();
-        CompileServlet compileServlet = new CompileServlet();
-
+    protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         String projectPath = System.getProperty("user.dir");
-        File tokenFile = new File(projectPath, "User_Tokens.txt");
 
-        Scanner tokenScan = new Scanner(tokenFile);
+        File instructionsFile = new File(projectPath, "User_Instructions.txt");
+        Scanner instructionScanner = new Scanner(instructionsFile);
 
-        // import encoding table
-        File encodingTableFile = new File(projectPath, "Encoding_Table.csv");
-        CSVReader encodingTableReader = new CSVReader(encodingTableFile);
-        HashMap<String, Integer> encodingTable = encodingTableReader.interpretAsEncodingTable();
-        encodingTableReader.close();
+        File generatorsFile = new File(projectPath, "codeGenerators.txt");
+        Scanner generatorScanner = new Scanner(generatorsFile);
 
-        // gather sequence labels
-        ArrayList<InstructionCategorizer> instructionCategories = new ArrayList<InstructionCategorizer>();
-        instructionCategories.add(new OpperationCategorizer());
-        instructionCategories.add(new VariableCategorizer());
-        instructionCategories.add(new ConstantCategorizer());
-
-        // import CONO table
-        File conoTableFile = new File(projectPath, "CONO_Table.csv");
-        CSVReader conoTableReader = new CSVReader(conoTableFile);
-        HashMap<Pair<Integer, Integer>, String> conoTable = conoTableReader.interpretAsCONOtable(encodingTable, instructionCategories);
-        conoTableReader.close();
-
-        Validator validator = new Validator(encodingTable, conoTable, instructionCategories, );
-
-
-
-        if(compileServlet.instructionsAreValid == true){
-
+        // setup for loop (#generators = #instructions - 1)
+        if (!instructionScanner.hasNextLine())
+        {
+            // no code, do something with that later
+            return;
         }
 
-        /*
-        while (tokenScan.hasNextLine()) {
-            String token = tokenScan.nextLine();
+        // generator + instruction pair
+        String currentGenerator;
+        Integer previousInstruction = instructionScanner.nextInt();
+        Integer currentInstruction;
 
-            if (token.equals("EOL") || token.equals("EOF")) {
+        // hashmaps
+        HashMap<Integer, Object> variableToValueMap = new HashMap<>();
+        HashMap<Integer, EssolangOpperation> opperationsMap = new HashMap<>();
+        opperationsMap.put(201, new IntegerAddition());
+        opperationsMap.put(202, new IntegerSubtraction());
+        opperationsMap.put(203, new IntegerMultiplication());
+        opperationsMap.put(204, new IntegerDivision());
 
-                graphicsHTML.append(
-                        graphicsInterpreter.interpretShape( codeLine.toString() )
-                ).append("\\n");
+        // runtime trackers
+        // TODO: make compile time trackers as well (with added functionality later [EXTREMELY IMPORTANT THEN])
+        Integer setVariableInstruction = null;
+        Object opperationCache = null;
 
-//                if (graphicsInterpreter.isAnimation( codeLine.toString() ))
-//                    graphicsHTML.append(
-//                            graphicsInterpreter.interpretAnimation( codeLine.toString() )
-//                    ).append("\\n");
+        Integer firstOpperand = null;
+        Integer opperationInstruciton = null;
 
-                codeLine = new StringBuilder();
-                continue;
+
+
+        // run through instructions
+        while (instructionScanner.hasNextLine() && generatorScanner.hasNextLine()) {
+            currentInstruction = instructionScanner.nextInt();
+            currentGenerator = generatorScanner.nextLine();
+
+            // immediately evaluate constants
+            if (new ConstantCategorizer().withinCategory(currentInstruction)) {
+                variableToValueMap.put(currentInstruction,
+                        Integer.parseInt(instructionScanner.next().trim())
+                );
             }
 
-            codeLine.append(token).append(" ");
+            System.out.println("\n Prev: " + previousInstruction + " Curr: " + currentInstruction + " Gen: " + currentGenerator + "\n");
+
+            switch (currentGenerator) {
+                case "nop": break;
+
+                case "var_init":
+                    variableToValueMap.put(currentInstruction, null);
+                break;
+
+                case "start_set":
+                    setVariableInstruction = previousInstruction;
+                break;
+
+                case "set_val":
+                    opperationCache = variableToValueMap.get(currentInstruction);
+                break;
+
+                case "end_set":
+                    variableToValueMap.put(setVariableInstruction, opperationCache);
+                    setVariableInstruction = null;
+                    opperationCache = null;
+                break;
+
+                case "start_opp":
+                    firstOpperand = previousInstruction;
+                    opperationInstruciton = currentInstruction;
+                break;
+
+                case "end_opp":
+                    opperationCache = opperationsMap.get(previousInstruction).operate(
+                            opperationCache,
+                            variableToValueMap.get(currentInstruction)
+                    );
+
+                    firstOpperand = null;
+                break;
+
+                default:
+                    // generator not found, shouldn't happen?
+                break;
+            }
+
+            System.out.println("Variables:");
+            for (Integer varInstruction : variableToValueMap.keySet()) {
+                System.out.printf("    %d: %s\n",
+                        varInstruction,
+                        (variableToValueMap.get(varInstruction) == null)? "Null" :
+                        variableToValueMap.get(varInstruction).toString());
+            }
+
+            previousInstruction = currentInstruction;
         }
 
 
@@ -101,16 +143,8 @@ public class RunServlet extends HttpServlet {
 
         // write
         PrintWriter respBodyWriter = resp.getWriter();
-        respBodyWriter.print(
-                "{\n\"HTML\":\n\"" +
-                        graphicsHTML.toString() +
-                        "\",\n\"Animation\":\n\"" +
-//                        graphicsAnimation.toString() +
-                        "\"\n}"
-        );
+//        respBodyWriter.print();
         respBodyWriter.close();
-
-         */
 	}
 
 

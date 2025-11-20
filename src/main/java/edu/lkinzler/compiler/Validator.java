@@ -88,6 +88,7 @@ public class Validator {
                     categorizeInstruction( previousInstruction ),
                     categorizeInstruction( currentInstruction )))) {
 
+                // place into list of code generators
                 if (currentInstruction == 0 || currentInstruction == 1){
                     line++;
                     previousInstruction = currentInstruction;

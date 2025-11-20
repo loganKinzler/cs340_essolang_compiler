@@ -62,12 +62,6 @@ import edu.lkinzler.utility.functions.VariableCategorizer;
 
 public class CompileServlet extends HttpServlet {
 
-
-    //Fields
-    //This is so that the RunServlet can check if it's valid
-    //public Validator instructionValidator;
-    public Boolean instructionsAreValid;
-
     /***********************************************************
      * METHOD: encode                                          *
      * DESCRIPTION: This takes in the tokens and a mapping     *
@@ -212,7 +206,6 @@ public class CompileServlet extends HttpServlet {
 
         // encode tokens to instructions
         ArrayList<Integer> instructions = encode(encodingTable, tokens);
-        System.out.println(instructions.toString());
         outputLine = 0;
 
         for (Integer instruct : instructions)
@@ -231,27 +224,20 @@ public class CompileServlet extends HttpServlet {
         instructionCategories.add(new VariableCategorizer());
         instructionCategories.add(new ConstantCategorizer());
 
-           // import CONO table
-            File conoTableFile = new File(projectPath, "CONO_Table.csv");
-            CSVReader conoTableReader = new CSVReader(conoTableFile);
-            HashMap<Pair<Integer, Integer>, String> conoTable = conoTableReader.interpretAsCONOtable(encodingTable, instructionCategories);
-            conoTableReader.close();
+       // import CONO table
+        File conoTableFile = new File(projectPath, "CONO_Table.csv");
+        CSVReader conoTableReader = new CSVReader(conoTableFile);
+        HashMap<Pair<Integer, Integer>, String> conoTable = conoTableReader.interpretAsCONOtable(encodingTable, instructionCategories);
+        conoTableReader.close();
 
         List<String> codeGenerators = new ArrayList<>();
 
 
         // validate instruction set
         Validator instructionValidator = new Validator(encodingTable, conoTable, instructionCategories, traceOutput, codeGenerators);
-        instructionsAreValid = instructionValidator.validate(instructions);
+        instructionValidator.validate(instructions);
 
 
-        System.out.println("Generated Code: ");
-        for (String gen : instructionValidator.getCodeGenerators()) {
-            System.out.println("  " + gen);
-        }
-
-        // TODO: let user know if code compiled successfully
-        System.out.printf("Valid Instruction Set: %b\n", instructionsAreValid);
 
         // save user input
         File userInputFile = new File(projectPath, "User_Input.txt");
@@ -269,6 +255,32 @@ public class CompileServlet extends HttpServlet {
         Iterator<Integer> instructionsIterator = instructions.iterator();
         StringJoiner instructionsString = new StringJoiner("\n");
 
+        while (instructionsIterator.hasNext()) {
+            Integer saveInstruction = instructionsIterator.next();
+
+            if (!new ConstantCategorizer().withinCategory(saveInstruction))
+            {
+                instructionsString.add(saveInstruction.toString());
+                continue;
+            }
+
+            // find token
+            for (String token : encodingTable.keySet()){
+                if (encodingTable.get(token) == saveInstruction)
+                {
+                    instructionsString.add(saveInstruction.toString() + " " + token);
+                    break;
+                }
+            }
+
+            instructionsString.add(instructionsIterator.next().toString());
+        }
+
+        File instructionsFile = new File(projectPath, "User_Instructions.txt");
+        FileWriter instructionsWriter = new FileWriter(instructionsFile);
+        instructionsWriter.write( instructionsString.toString() );
+
+
         //Save codeGenerators
         File codeGeneratorsFile = new File(projectPath, "codeGenerators.txt");
         FileWriter codeGenWriter = new FileWriter(codeGeneratorsFile);
@@ -276,14 +288,6 @@ public class CompileServlet extends HttpServlet {
                 String.join("\n", instructionValidator.getCodeGenerators())
         );
         codeGenWriter.close();
-
-        while (instructionsIterator.hasNext())
-            instructionsString.add(instructionsIterator.next().toString());
-
-        File instructionsFile = new File(projectPath, "User_Instructions.txt");
-        FileWriter instructionsWriter = new FileWriter(instructionsFile);
-        instructionsWriter.write( instructionsString.toString() );
-
 
         // close
         user_input.close();
